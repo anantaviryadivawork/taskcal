@@ -2,6 +2,12 @@
 
 A full-stack To-Do List & Calendar web application built with Next.js 16. Organize your daily tasks through an interactive calendar interface with status tracking.
 
+## Live Demo
+
+**[DEPLOYMENT_URL]**
+
+> Replace `[DEPLOYMENT_URL]` with the Vercel deployment URL after first deploy.
+
 ## Features
 
 - **Authentication** — Register, login, logout with JWT-based secure sessions
@@ -24,7 +30,7 @@ A full-stack To-Do List & Calendar web application built with Next.js 16. Organi
 | ORM | Prisma 7 + `@prisma/adapter-pg` |
 | Auth | Custom JWT (jose) + httpOnly cookies |
 | Styling | Tailwind CSS v4 |
-| Calendar | react-day-picker v8 |
+| Calendar | react-day-picker v9 |
 | Validation | Zod |
 | Icons | Lucide React |
 
@@ -39,9 +45,15 @@ A full-stack To-Do List & Calendar web application built with Next.js 16. Organi
 
 ```bash
 git clone <repo-url>
-cd todo-calendar
+cd taskcal
 npm install
 ```
+
+> **Note:** This project uses **React 19**. If you encounter peer dependency errors during `npm install` (e.g. from packages that haven't declared React 19 support yet), add a `.npmrc` file at the project root with:
+> ```
+> legacy-peer-deps=true
+> ```
+> The `react-day-picker` dependency was upgraded to v9 specifically to resolve this; no workaround should be needed with a clean install.
 
 ### Environment Variables
 
@@ -49,15 +61,23 @@ npm install
 cp .env.example .env
 ```
 
+Fill in the following variables:
+
 | Variable | Description |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
-| `SESSION_SECRET` | Secret key for JWT (min 32 chars) — generate with `openssl rand -base64 32` |
+| `SESSION_SECRET` | Random secret for JWT signing — generate with `openssl rand -base64 32` |
 
 ### Database Setup
 
+Apply migrations and (optionally) seed demo data:
+
 ```bash
-npx prisma migrate deploy
+# Apply schema migrations
+npm run db:migrate
+
+# Seed a demo user (demo@example.com / demo1234!)
+npm run db:seed
 ```
 
 ### Development Server
@@ -70,22 +90,38 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Demo Credentials
 
+After running `npm run db:seed`:
+
 | Field | Value |
 |---|---|
 | Email | `demo@example.com` |
 | Password | `demo1234!` |
 
-> Register an account first, or use the seed script to create the demo user.
+The seed script creates the demo user and populates sample tasks spread across yesterday, today, and tomorrow so you can immediately explore the calendar view.
 
 ## Deployment to Vercel
 
 1. Create a **Neon** database at [neon.tech](https://neon.tech) (free tier available)
 2. Push your code to GitHub
 3. Import the repo in [Vercel](https://vercel.com)
-4. Add environment variables in Vercel project settings:
+4. Add environment variables in the Vercel project settings:
    - `DATABASE_URL` — use the **pooled** Neon connection string
    - `SESSION_SECRET` — run `openssl rand -base64 32` to generate
-5. Set the **Build Command** to: `prisma migrate deploy && next build`
+5. Set the **Build Command** to:
+   ```
+   prisma migrate deploy && next build
+   ```
+
+## Available Scripts
+
+| Script | Description |
+|---|---|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run db:migrate` | Apply pending migrations (`prisma migrate deploy`) |
+| `npm run db:seed` | Seed demo user and sample tasks |
+| `npm run db:studio` | Open Prisma Studio (visual DB browser) |
 
 ## API Reference
 
@@ -95,12 +131,12 @@ All endpoints require authentication (session cookie set on login).
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/tasks` | List all tasks; filter with `?date=YYYY-MM-DD` or `?status=NOT_STARTED` |
+| `GET` | `/api/tasks` | List all tasks; supports `?date=YYYY-MM-DD` and `?status=NOT_STARTED` |
 | `POST` | `/api/tasks` | Create a task |
 | `GET` | `/api/tasks/:id` | Get a single task |
-| `PUT` | `/api/tasks/:id` | Replace a task |
+| `PUT` | `/api/tasks/:id` | Replace a task (full update) |
 | `PATCH` | `/api/tasks/:id` | Partial update |
-| `DELETE` | `/api/tasks/:id` | Delete a task (returns 204) |
+| `DELETE` | `/api/tasks/:id` | Delete a task — returns `204 No Content` |
 
 #### Task Schema
 
@@ -116,7 +152,7 @@ All endpoints require authentication (session cookie set on login).
 ## Project Structure
 
 ```
-todo-calendar/
+taskcal/
 ├── app/
 │   ├── actions/          # Server Actions (auth + tasks)
 │   ├── api/tasks/        # REST API route handlers
@@ -125,20 +161,21 @@ todo-calendar/
 │   ├── register/         # Register page
 │   └── page.tsx          # Landing page
 ├── components/
-│   ├── calendar/         # Interactive calendar
-│   ├── tasks/            # Task card, list, form, summary
-│   ├── ui/               # Button, Input, Modal, Badge, etc.
+│   ├── calendar/         # Interactive calendar (react-day-picker v9)
+│   ├── tasks/            # Task card, list, form, status summary
+│   ├── ui/               # Button, Input, Modal, Badge, ThemeToggle, etc.
 │   └── dashboard-client.tsx
 ├── lib/
 │   ├── dal.ts            # Data Access Layer (session verification)
 │   ├── db.ts             # Prisma client singleton
 │   ├── definitions.ts    # Zod schemas and TypeScript types
 │   ├── session.ts        # JWT encrypt/decrypt + cookie management
-│   └── utils.ts          # Utility functions + status constants
+│   └── utils.ts          # Utility functions + status label/color constants
 ├── prisma/
-│   ├── schema.prisma     # Database schema
+│   ├── schema.prisma     # Database schema (User, Task, TaskStatus enum)
+│   ├── seed.ts           # Demo data seeder
 │   └── migrations/       # SQL migration files
-└── proxy.ts              # Route protection (Next.js 16 replaces middleware)
+└── proxy.ts              # Route protection (Next.js 16 — replaces middleware.ts)
 ```
 
 ## Security
@@ -146,8 +183,8 @@ todo-calendar/
 - Passwords hashed with **bcryptjs** (12 rounds)
 - Sessions stored as **httpOnly, SameSite=Lax** cookies (7-day expiry)
 - JWT signed with **HMAC-SHA256** via `jose`
-- All task API endpoints verify **user ownership** before every operation
-- `proxy.ts` guards protected routes server-side
+- All task endpoints verify **user ownership** before any read/write operation
+- `proxy.ts` guards protected routes at the edge level
 
 ## License
 
