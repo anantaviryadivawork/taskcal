@@ -23,9 +23,9 @@ export default async function DashboardPage() {
   });
 
   const today = toDateString(new Date());
-  const todayTasks = allTasks.filter(
+  const todayCount = allTasks.filter(
     (t) => toDateString(new Date(t.date)) === today
-  );
+  ).length;
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -62,17 +62,13 @@ export default async function DashboardPage() {
             Hello, {user.name.split(" ")[0]}!
           </h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-            {todayTasks.length > 0
-              ? `You have ${todayTasks.length} task${todayTasks.length !== 1 ? "s" : ""} today`
+            {todayCount > 0
+              ? `You have ${todayCount} task${todayCount !== 1 ? "s" : ""} today`
               : "No tasks scheduled for today"}
           </p>
         </div>
 
-        <DashboardClient
-          initialDate={today}
-          allTasks={allTasks}
-          initialTasks={todayTasks}
-        />
+        <DashboardClient initialDate={today} allTasks={allTasks} />
       </main>
     </div>
   );
