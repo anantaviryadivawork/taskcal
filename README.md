@@ -4,9 +4,13 @@ A full-stack To-Do List & Calendar web application built with Next.js 16. Organi
 
 ## Live Demo
 
+<<<<<<< HEAD
 **[DEPLOYMENT_URL]**
 
 > Replace `[https://taskcal-phi.vercel.app/]` with the Vercel deployment URL after first deploy.
+=======
+**[https://taskcal-phi.vercel.app/](https://taskcal-phi.vercel.app/)**
+>>>>>>> 8f24c44 (docs: update README with live demo URL and improvements)
 
 ## Features
 
